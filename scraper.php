@@ -1,19 +1,25 @@
 <?php
 
+// Get the HSCIC pharmacy list.
 $sDispensary = file_get_contents('edispensary.csv');
 $aDispensary = explode("\r\n", $sDispensary);
 
 $sUrl = 'http://www.nhs.uk/Services/pharmacies/Overview/DefaultView.aspx?id=';
 
-for($i = 19; $i < 40; $i++)
+// Loop through the first 100 pharmacies
+for($i = 0; $i < 100; $i++)
 {
-  //echo $aDispensary[$i].PHP_EOL;
-  $sNHSCode = substr($aDispensary[$i], 1, 5);
+  $sNHSCode = substr($aDispensary[$i], 1, 5); // ODS Code is always 5 characters long.
   $arrPharmacies[$sNHSCode] = getDataFromPage($sUrl . $sNHSCode);
+
+  // Give some feedback to the user
+  if(is_array($arrPharmacies[$sNHSCode]))
+    echo $sNHSCode . ' Complete' . PHP_EOL;
+  else
+    echo $sNHSCode . ' ' . $arrPharmacies[$sNHSCode] . PHP_EOL;
 }
 
 echo print_r($arrPharmacies);
-
 
 // A little function to extract text from betwen two strings in the document.
 function getEnclosedText($sContent, $sOpen, $sClose, $lStart)
@@ -59,13 +65,16 @@ function getDataFromPage($sUrl)
     }
   } while($bExists);
 
+  // Check when this information was last updated.
   $sLastVerifiedOn = 'Last verified on ';
   $arrTimes['last-verified'] = getEnclosedText($sPage, $sLastVerifiedOn, '</p>', 0);
 
+  // If the text exists then get the review score
   $sRatingOpen = 'property ="v:rating">';
   if(strpos($sPage, $sRatingOpen))
     $arrTimes['reviews']['score'] = trim(getEnclosedText($sPage, $sRatingOpen, '</span>', 0));
 
+  // If the text exists get the review 'count' (how many people reviewed the pharmacy)
   $sRatingCountOpen = "property='v:count'>";
   if(strpos($sPage, $sRatingCountOpen))
     $arrTimes['reviews']['count'] = trim(getEnclosedText($sPage, $sRatingCountOpen, '</strong>', 0));
